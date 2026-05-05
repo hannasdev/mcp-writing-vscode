@@ -4,6 +4,22 @@
   "description": "VS Code companion extension for MCP Writing setup flows",
   "version": "0.0.1",
   "publisher": "hannasdev",
+  "license": "AGPL-3.0-only",
+  "homepage": "https://github.com/hannasdev/mcp-writing-vscode",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hannasdev/mcp-writing-vscode.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hannasdev/mcp-writing-vscode/issues"
+  },
+  "keywords": [
+    "mcp",
+    "writing",
+    "vscode",
+    "styleguide",
+    "scrivener"
+  ],
   "engines": {
     "vscode": "^1.100.0"
   },
@@ -39,9 +55,12 @@
   },
   "scripts": {
     "lint": "echo 'Add lint config'",
-    "test": "echo 'Add tests'"
+    "test": "echo 'Add tests'",
+    "package": "vsce package",
+    "publish:marketplace": "vsce publish"
   },
   "devDependencies": {
-    "@types/vscode": "^1.100.0"
+    "@types/vscode": "^1.100.0",
+    "@vscode/vsce": "^3.3.2"
   }
 }
