@@ -1,0 +1,42 @@
+{
+  "name": "mcp-writing-vscode",
+  "displayName": "MCP Writing",
+  "description": "VS Code companion extension for MCP Writing setup flows",
+  "version": "0.0.1",
+  "publisher": "hannasdev",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:mcpWriting.setupProseStyleguide"
+  ],
+  "main": "./src/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "MCP Writing",
+      "properties": {
+        "mcpWriting.serverUrl": {
+          "type": "string",
+          "default": "http://localhost:3000",
+          "description": "Base URL for the MCP Writing server (SSE transport)."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "mcpWriting.setupProseStyleguide",
+        "title": "MCP Writing: Setup Prose Styleguide"
+      }
+    ]
+  },
+  "scripts": {
+    "lint": "echo 'Add lint config'",
+    "test": "echo 'Add tests'"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.100.0"
+  }
+}
