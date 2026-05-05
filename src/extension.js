@@ -17,9 +17,14 @@ class McpSseClient {
   }
 
   async connect() {
-    this.sseResponse = await fetch(`${this.baseUrl}/sse`);
+    try {
+      this.sseResponse = await fetch(`${this.baseUrl}/sse`);
+    } catch (error) {
+      throw new Error(`Could not reach MCP server at ${this.baseUrl}. Start mcp-writing and verify mcpWriting.serverUrl. (${error instanceof Error ? error.message : String(error)})`);
+    }
+
     if (!this.sseResponse.ok || !this.sseResponse.body) {
-      throw new Error(`Failed to connect to MCP SSE endpoint (${this.sseResponse.status}).`);
+      throw new Error(`Failed to connect to MCP SSE endpoint at ${this.baseUrl}/sse (${this.sseResponse.status}).`);
     }
 
     this.reader = this.sseResponse.body.getReader();
@@ -165,12 +170,17 @@ class McpSseClient {
 
 function parseToolText(result) {
   const first = result?.content?.[0]?.text;
-  if (!first) return null;
+  if (!first) return { parsed: null, rawText: "" };
   try {
-    return JSON.parse(first);
+    return { parsed: JSON.parse(first), rawText: first };
   } catch {
-    return null;
+    return { parsed: null, rawText: first };
   }
+}
+
+function getServerUrl() {
+  const config = vscode.workspace.getConfiguration("mcpWriting");
+  return config.get("serverUrl", "http://localhost:3000");
 }
 
 async function pickScope() {
@@ -190,18 +200,92 @@ async function pickLanguage(languages) {
   );
 }
 
+async function pickProjectIdForBootstrap(client, defaultProjectId) {
+  const discoverResult = await client.callTool("find_scenes", { page_size: 200, page: 1 });
+  const discoverEnvelope = parseToolText(discoverResult);
+  const discoverPayload = discoverEnvelope.parsed;
+  const results = Array.isArray(discoverPayload?.results) ? discoverPayload.results : [];
+  const ids = [...new Set(results.map((row) => row?.project_id).filter((v) => typeof v === "string" && v.trim().length > 0))];
+
+  if (ids.length > 0) {
+    const sortedIds = ids.sort((a, b) => a.localeCompare(b));
+    const picked = await vscode.window.showQuickPick(
+      sortedIds.map((id) => ({ label: id, value: id })),
+      {
+        title: "Project ID for bootstrap",
+        placeHolder: "Choose which project to analyze scene conventions from",
+      }
+    );
+    if (picked?.value) return picked.value;
+  }
+
+  const input = await vscode.window.showInputBox({
+    title: "Project ID for bootstrap",
+    prompt: "Could not auto-discover project IDs. Enter project_id for bootstrap analysis.",
+    value: defaultProjectId ?? "",
+    ignoreFocusOut: true,
+  });
+  return input?.trim() || "";
+}
+
+async function pickProjectIdForConfig(client, defaultProjectId) {
+  const discoverResult = await client.callTool("find_scenes", { page_size: 200, page: 1 });
+  const discoverEnvelope = parseToolText(discoverResult);
+  const discoverPayload = discoverEnvelope.parsed;
+  const results = Array.isArray(discoverPayload?.results) ? discoverPayload.results : [];
+  const ids = [...new Set(results.map((row) => row?.project_id).filter((v) => typeof v === "string" && v.trim().length > 0))];
+
+  if (ids.length > 0) {
+    const sortedIds = ids.sort((a, b) => a.localeCompare(b));
+    const picked = await vscode.window.showQuickPick(
+      sortedIds.map((id) => ({ label: id, value: id })),
+      {
+        title: "Project ID",
+        placeHolder: "Choose where project-root styleguide config should be written",
+      }
+    );
+    if (picked?.value) return picked.value;
+  }
+
+  const input = await vscode.window.showInputBox({
+    title: "Project ID",
+    prompt: "Enter project_id for project-root styleguide config.",
+    value: defaultProjectId ?? "",
+    ignoreFocusOut: true,
+  });
+  return input?.trim() || "";
+}
+
+async function testServerConnection() {
+  const serverUrl = getServerUrl();
+  const client = new McpSseClient(serverUrl);
+
+  try {
+    await client.connect();
+    const workflowResult = await client.callTool("describe_workflows", {});
+    const workflowEnvelope = parseToolText(workflowResult);
+    const workflowPayload = workflowEnvelope.parsed;
+    if (!workflowPayload?.ok) {
+      throw new Error(`Connected, but describe_workflows did not return ok. Raw response: ${workflowEnvelope.rawText || "<empty>"}`);
+    }
+    vscode.window.showInformationMessage(`MCP Writing server connection successful (${serverUrl}).`);
+  } finally {
+    await client.close();
+  }
+}
+
 async function runStyleguideSetupFlow() {
-  const config = vscode.workspace.getConfiguration("mcpWriting");
-  const serverUrl = config.get("serverUrl", "http://localhost:3000");
+  const serverUrl = getServerUrl();
   const client = new McpSseClient(serverUrl);
 
   try {
     await client.connect();
 
     const workflowResult = await client.callTool("describe_workflows", {});
-    const workflowPayload = parseToolText(workflowResult);
+    const workflowEnvelope = parseToolText(workflowResult);
+    const workflowPayload = workflowEnvelope.parsed;
     if (!workflowPayload?.ok) {
-      throw new Error("describe_workflows did not return an ok payload.");
+      throw new Error(`describe_workflows did not return an ok payload. Raw response: ${workflowEnvelope.rawText || "<empty>"}`);
     }
 
     const setupContract = workflowPayload.context?.setup_contract;
@@ -215,14 +299,9 @@ async function runStyleguideSetupFlow() {
 
     let projectId = workflowPayload.context?.project_id ?? "";
     if (scopePick.value === "project_root") {
-      const input = await vscode.window.showInputBox({
-        title: "Project ID",
-        prompt: "Enter project_id for project-root styleguide config.",
-        value: projectId,
-        ignoreFocusOut: true,
-      });
+      const input = await pickProjectIdForConfig(client, projectId);
       if (!input) return;
-      projectId = input.trim();
+      projectId = input;
       if (!projectId) {
         throw new Error("project_id is required for project_root scope.");
       }
@@ -268,28 +347,62 @@ async function runStyleguideSetupFlow() {
     };
 
     if (shouldBootstrap.value) {
+      let bootstrapProjectId = projectId;
+      if (!bootstrapProjectId) {
+        const bootstrapInput = await pickProjectIdForBootstrap(client, workflowPayload.context?.project_id);
+        if (!bootstrapInput) {
+          const skipBootstrap = await vscode.window.showWarningMessage(
+            "No project_id provided for bootstrap. Continue without bootstrap?",
+            { modal: true },
+            "Continue without bootstrap",
+            "Cancel"
+          );
+          if (skipBootstrap !== "Continue without bootstrap") {
+            return;
+          }
+        } else {
+          bootstrapProjectId = bootstrapInput.trim();
+        }
+      }
+
+      if (bootstrapProjectId) {
       const bootstrapArgs = {
-        ...(scopePick.value === "project_root" ? { project_id: projectId } : {}),
+        project_id: bootstrapProjectId,
         max_scenes: Math.max(1, workflowPayload.context?.scene_count ?? 1),
       };
       const bootstrapResult = await client.callTool("bootstrap_prose_styleguide_config", bootstrapArgs);
-      const bootstrapPayload = parseToolText(bootstrapResult);
+      const bootstrapEnvelope = parseToolText(bootstrapResult);
+      const bootstrapPayload = bootstrapEnvelope.parsed;
       if (!bootstrapPayload?.ok) {
-        throw new Error(`Bootstrap failed: ${bootstrapPayload?.error?.message ?? "unknown error"}`);
+        const details = bootstrapPayload?.error?.message
+          ?? bootstrapEnvelope.rawText
+          ?? "unknown error";
+        const proceed = await vscode.window.showWarningMessage(
+          `Bootstrap failed. Continue with setup anyway? Details: ${details}`,
+          { modal: true },
+          "Continue",
+          "Cancel"
+        );
+        if (proceed !== "Continue") {
+          throw new Error(`Bootstrap failed: ${details}`);
+        }
+      }
       }
     }
 
     const setupResult = await client.callTool("setup_prose_styleguide_config", setupArgs);
-    const setupPayload = parseToolText(setupResult);
+    const setupEnvelope = parseToolText(setupResult);
+    const setupPayload = setupEnvelope.parsed;
     if (!setupPayload?.ok) {
-      throw new Error(`Config setup failed: ${setupPayload?.error?.message ?? "unknown error"}`);
+      throw new Error(`Config setup failed: ${setupPayload?.error?.message ?? setupEnvelope.rawText ?? "unknown error"}`);
     }
 
     if (scopePick.value === "sync_root") {
       const skillResult = await client.callTool("setup_prose_styleguide_skill", { overwrite: false });
-      const skillPayload = parseToolText(skillResult);
+      const skillEnvelope = parseToolText(skillResult);
+      const skillPayload = skillEnvelope.parsed;
       if (!skillPayload?.ok) {
-        throw new Error(`Skill setup failed: ${skillPayload?.error?.message ?? "unknown error"}`);
+        throw new Error(`Skill setup failed: ${skillPayload?.error?.message ?? skillEnvelope.rawText ?? "unknown error"}`);
       }
     }
 
@@ -300,7 +413,7 @@ async function runStyleguideSetupFlow() {
 }
 
 function activate(context) {
-  const disposable = vscode.commands.registerCommand("mcpWriting.setupProseStyleguide", async () => {
+  const setupDisposable = vscode.commands.registerCommand("mcpWriting.setupProseStyleguide", async () => {
     try {
       await runStyleguideSetupFlow();
     } catch (error) {
@@ -308,7 +421,15 @@ function activate(context) {
     }
   });
 
-  context.subscriptions.push(disposable);
+  const testConnectionDisposable = vscode.commands.registerCommand("mcpWriting.testServerConnection", async () => {
+    try {
+      await testServerConnection();
+    } catch (error) {
+      vscode.window.showErrorMessage(`MCP Writing connection test failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  });
+
+  context.subscriptions.push(setupDisposable, testConnectionDisposable);
 }
 
 function deactivate() {}

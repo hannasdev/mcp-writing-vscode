@@ -11,7 +11,8 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:mcpWriting.setupProseStyleguide"
+    "onCommand:mcpWriting.setupProseStyleguide",
+    "onCommand:mcpWriting.testServerConnection"
   ],
   "main": "./src/extension.js",
   "contributes": {
@@ -29,6 +30,10 @@
       {
         "command": "mcpWriting.setupProseStyleguide",
         "title": "MCP Writing: Setup Prose Styleguide"
+      },
+      {
+        "command": "mcpWriting.testServerConnection",
+        "title": "MCP Writing: Test Server Connection"
       }
     ]
   },
