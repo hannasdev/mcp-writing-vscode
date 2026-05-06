@@ -1,56 +1,41 @@
-# mcp-writing-vscode
+# MCP Writing for VS Code
 
-VS Code extension for MCP Writing client-native setup flows.
+Set up your MCP Writing prose styleguide directly in VS Code with a guided flow.
 
-Repository: [github.com/hannasdev/mcp-writing-vscode](https://github.com/hannasdev/mcp-writing-vscode)
+## What this extension does
 
-## Features
+- Connects to your running MCP Writing server
+- Walks you through styleguide setup with interactive prompts
+- Supports project selection when multiple projects are available
+- Saves setup configuration through MCP Writing tools
+
+## Commands
 
 - `MCP Writing: Test Server Connection`
 - `MCP Writing: Setup Prose Styleguide`
-- Contract-driven setup prompts for scope/language/project selection
-- Optional bootstrap preview flow before config write
 
-## Usage
+## Requirements
 
-1. Start MCP Writing server (default expected URL: `http://localhost:3000`).
-2. In VS Code settings, set `mcpWriting.serverUrl` if needed.
-3. Run command palette action: `MCP Writing: Test Server Connection`.
-4. Run command palette action: `MCP Writing: Setup Prose Styleguide`.
+- A running MCP Writing server (default URL: `http://localhost:3000`)
+- VS Code `1.100.0` or newer
 
-The setup command:
-- reads setup metadata from `describe_workflows`
-- prompts for scope/language/project context
-- optionally runs bootstrap analysis
-- writes styleguide config (and sync-root skill when applicable)
+## Quick start
 
-## Local development
+1. Start your MCP Writing server.
+2. In VS Code, open Command Palette and run `MCP Writing: Test Server Connection`.
+3. Run `MCP Writing: Setup Prose Styleguide`.
+4. Follow the prompts to complete setup.
 
-```sh
-npm install
-# Press F5 in VS Code to start Extension Development Host
-```
+## Extension settings
 
-## Packaging
+- `mcpWriting.serverUrl`: Base URL for MCP Writing server (`http://localhost:3000` by default).
 
-```sh
-npm run package
-```
+## Troubleshooting
 
-This produces a `.vsix` file you can install locally in VS Code.
+- If you get `fetch failed`, verify the server is running and reachable from VS Code.
+- If setup cannot write config, ensure your `WRITING_SYNC_DIR` is writable.
 
-## Publish to VS Code Marketplace
+## Project links
 
-1. Create a publisher in the VS Code Marketplace.
-2. Create a Personal Access Token for that publisher.
-3. Login once:
-
-```sh
-npx vsce login hannasdev
-```
-
-4. Publish:
-
-```sh
-npm run publish:marketplace
-```
+- MCP Writing: [github.com/hannasdev/mcp-writing](https://github.com/hannasdev/mcp-writing)
+- Extension repository: [github.com/hannasdev/mcp-writing-vscode](https://github.com/hannasdev/mcp-writing-vscode)

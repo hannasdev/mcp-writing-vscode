@@ -2,8 +2,9 @@
   "name": "mcp-writing-vscode",
   "displayName": "MCP Writing",
   "description": "VS Code companion extension for MCP Writing setup flows",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "publisher": "hannasdev",
+  "icon": "mcp-writing-logo.png",
   "license": "AGPL-3.0-only",
   "homepage": "https://github.com/hannasdev/mcp-writing-vscode",
   "repository": {
@@ -18,17 +19,27 @@
     "writing",
     "vscode",
     "styleguide",
-    "scrivener"
+    "scrivener",
+    "creative-writing",
+    "authoring",
+    "editorial"
   ],
   "engines": {
     "vscode": "^1.100.0"
   },
   "categories": [
-    "Other"
+    "Other",
+    "Education",
+    "Formatters"
   ],
+  "galleryBanner": {
+    "color": "#1F2937",
+    "theme": "dark"
+  },
   "activationEvents": [
     "onCommand:mcpWriting.setupProseStyleguide",
-    "onCommand:mcpWriting.testServerConnection"
+    "onCommand:mcpWriting.testServerConnection",
+    "onCommand:mcpWriting.updateProseStyleguide"
   ],
   "main": "./src/extension.js",
   "contributes": {
@@ -48,6 +59,10 @@
         "title": "MCP Writing: Setup Prose Styleguide"
       },
       {
+        "command": "mcpWriting.updateProseStyleguide",
+        "title": "MCP Writing: Update Prose Styleguide"
+      },
+      {
         "command": "mcpWriting.testServerConnection",
         "title": "MCP Writing: Test Server Connection"
       }
@@ -55,7 +70,7 @@
   },
   "scripts": {
     "lint": "echo 'Add lint config'",
-    "test": "echo 'Add tests'",
+    "test": "node --test test/*.test.cjs",
     "package": "vsce package",
     "publish:marketplace": "vsce publish"
   },

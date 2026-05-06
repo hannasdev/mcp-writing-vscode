@@ -168,6 +168,12 @@ class McpSseClient {
   }
 }
 
+const EXISTING_STYLEGUIDE_MESSAGE = "A prose styleguide config already exists for this project.";
+
+function isExistingStyleguideConfigError(payload) {
+  return payload?.error?.code === "STYLEGUIDE_CONFIG_EXISTS";
+}
+
 function parseToolText(result) {
   const first = result?.content?.[0]?.text;
   if (!first) return { parsed: null, rawText: "" };
@@ -274,6 +280,80 @@ async function testServerConnection() {
   }
 }
 
+async function runStyleguideUpdateFlow() {
+  const serverUrl = getServerUrl();
+  const client = new McpSseClient(serverUrl);
+
+  try {
+    await client.connect();
+
+    const scopePick = await pickScope();
+    if (!scopePick) return;
+
+    let projectId = "";
+    if (scopePick.value === "project_root") {
+      const workflowResult = await client.callTool("describe_workflows", {});
+      const workflowEnvelope = parseToolText(workflowResult);
+      const workflowPayload = workflowEnvelope.parsed;
+      projectId = workflowPayload?.context?.project_id ?? "";
+
+      const input = await pickProjectIdForConfig(client, projectId);
+      if (!input) return;
+      projectId = input;
+      if (!projectId) {
+        throw new Error("project_id is required for project_root scope.");
+      }
+    }
+
+    const updatesText = await vscode.window.showInputBox({
+      title: "Styleguide updates (JSON)",
+      prompt: "Enter JSON updates for update_prose_styleguide_config (example: {\"voice_notes\":\"Tighter POV, lighter adverbs\"})",
+      value: "{}",
+      ignoreFocusOut: true,
+    });
+    if (!updatesText) return;
+
+    let updates;
+    try {
+      updates = JSON.parse(updatesText);
+    } catch {
+      throw new Error("Invalid JSON for styleguide updates.");
+    }
+
+    const previewArgs = {
+      scope: scopePick.value,
+      ...(scopePick.value === "project_root" ? { project_id: projectId } : {}),
+      updates,
+    };
+
+    const previewResult = await client.callTool("preview_prose_styleguide_config_update", previewArgs);
+    const previewEnvelope = parseToolText(previewResult);
+    const previewPayload = previewEnvelope.parsed;
+    if (!previewPayload?.ok) {
+      throw new Error(`Update preview failed: ${previewPayload?.error?.message ?? previewEnvelope.rawText ?? "unknown error"}`);
+    }
+
+    const changedFields = Array.isArray(previewPayload.changed_fields) ? previewPayload.changed_fields.join(", ") : "";
+    const confirm = await vscode.window.showInformationMessage(
+      changedFields ? `Apply styleguide updates? Changed fields: ${changedFields}` : "Apply styleguide updates?",
+      { modal: true },
+      "Apply updates",
+      "Cancel"
+    );
+    if (confirm !== "Apply updates") return;
+
+    const updateResult = await client.callTool("update_prose_styleguide_config", previewArgs);
+    const updateEnvelope = parseToolText(updateResult);
+    const updatePayload = updateEnvelope.parsed;
+    if (!updatePayload?.ok) {
+      throw new Error(`Styleguide update failed: ${updatePayload?.error?.message ?? updateEnvelope.rawText ?? "unknown error"}`);
+    }
+
+    vscode.window.showInformationMessage("MCP Writing prose styleguide updated.");
+  } finally {
+    await client.close();
+  }
+}
 async function runStyleguideSetupFlow() {
   const serverUrl = getServerUrl();
   const client = new McpSseClient(serverUrl);
@@ -394,6 +474,18 @@ async function runStyleguideSetupFlow() {
     const setupEnvelope = parseToolText(setupResult);
     const setupPayload = setupEnvelope.parsed;
     if (!setupPayload?.ok) {
+      if (isExistingStyleguideConfigError(setupPayload)) {
+        const choice = await vscode.window.showWarningMessage(
+          EXISTING_STYLEGUIDE_MESSAGE,
+          { modal: true },
+          "Edit existing styleguide",
+          "Cancel"
+        );
+        if (choice === "Edit existing styleguide") {
+          await vscode.commands.executeCommand("mcpWriting.updateProseStyleguide");
+        }
+        return;
+      }
       throw new Error(`Config setup failed: ${setupPayload?.error?.message ?? setupEnvelope.rawText ?? "unknown error"}`);
     }
 
@@ -421,6 +513,14 @@ function activate(context) {
     }
   });
 
+  const updateDisposable = vscode.commands.registerCommand("mcpWriting.updateProseStyleguide", async () => {
+    try {
+      await runStyleguideUpdateFlow();
+    } catch (error) {
+      vscode.window.showErrorMessage(`MCP Writing styleguide update failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  });
+
   const testConnectionDisposable = vscode.commands.registerCommand("mcpWriting.testServerConnection", async () => {
     try {
       await testServerConnection();
@@ -429,7 +529,7 @@ function activate(context) {
     }
   });
 
-  context.subscriptions.push(setupDisposable, testConnectionDisposable);
+  context.subscriptions.push(setupDisposable, updateDisposable, testConnectionDisposable);
 }
 
 function deactivate() {}
@@ -437,4 +537,9 @@ function deactivate() {}
 module.exports = {
   activate,
   deactivate,
+  __test: {
+    parseToolText,
+    isExistingStyleguideConfigError,
+    EXISTING_STYLEGUIDE_MESSAGE,
+  },
 };
