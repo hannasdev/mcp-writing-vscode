@@ -169,9 +169,45 @@ class McpSseClient {
 }
 
 const EXISTING_STYLEGUIDE_MESSAGE = "A prose styleguide config already exists for this project.";
+const EXISTING_STYLEGUIDE_TITLE = "Styleguide already set up";
+const EXISTING_STYLEGUIDE_FALLBACK = "Couldn't open styleguide editor. Try the styleguide update command from Command Palette.";
+const EDIT_EXISTING_STYLEGUIDE_ACTION = "Edit existing styleguide";
+const CANCEL_ACTION = "Cancel";
 
 function isExistingStyleguideConfigError(payload) {
   return payload?.error?.code === "STYLEGUIDE_CONFIG_EXISTS";
+}
+
+function getExistingStyleguideUiState(payload) {
+  if (!isExistingStyleguideConfigError(payload)) return null;
+  return {
+    title: EXISTING_STYLEGUIDE_TITLE,
+    body: EXISTING_STYLEGUIDE_MESSAGE,
+    primaryAction: EDIT_EXISTING_STYLEGUIDE_ACTION,
+    secondaryAction: CANCEL_ACTION,
+  };
+}
+
+async function handleExistingStyleguideDuringSetup(payload) {
+  const state = getExistingStyleguideUiState(payload);
+  if (!state) return false;
+
+  const choice = await vscode.window.showWarningMessage(
+    `${state.title}\n\n${state.body}`,
+    { modal: true },
+    state.primaryAction,
+    state.secondaryAction
+  );
+
+  if (choice === state.primaryAction) {
+    try {
+      await vscode.commands.executeCommand("mcpWriting.updateProseStyleguide");
+    } catch {
+      vscode.window.showErrorMessage(EXISTING_STYLEGUIDE_FALLBACK);
+    }
+  }
+
+  return true;
 }
 
 function parseToolText(result) {
@@ -474,16 +510,7 @@ async function runStyleguideSetupFlow() {
     const setupEnvelope = parseToolText(setupResult);
     const setupPayload = setupEnvelope.parsed;
     if (!setupPayload?.ok) {
-      if (isExistingStyleguideConfigError(setupPayload)) {
-        const choice = await vscode.window.showWarningMessage(
-          EXISTING_STYLEGUIDE_MESSAGE,
-          { modal: true },
-          "Edit existing styleguide",
-          "Cancel"
-        );
-        if (choice === "Edit existing styleguide") {
-          await vscode.commands.executeCommand("mcpWriting.updateProseStyleguide");
-        }
+      if (await handleExistingStyleguideDuringSetup(setupPayload)) {
         return;
       }
       throw new Error(`Config setup failed: ${setupPayload?.error?.message ?? setupEnvelope.rawText ?? "unknown error"}`);
@@ -541,5 +568,11 @@ module.exports = {
     parseToolText,
     isExistingStyleguideConfigError,
     EXISTING_STYLEGUIDE_MESSAGE,
+    EXISTING_STYLEGUIDE_TITLE,
+    EXISTING_STYLEGUIDE_FALLBACK,
+    EDIT_EXISTING_STYLEGUIDE_ACTION,
+    CANCEL_ACTION,
+    getExistingStyleguideUiState,
+    handleExistingStyleguideDuringSetup,
   },
 };
