@@ -13,6 +13,7 @@ Set up your MCP Writing prose styleguide directly in VS Code with a guided flow.
 
 - `MCP Writing: Test Server Connection`
 - `MCP Writing: Setup Prose Styleguide`
+- `MCP Writing: Update Prose Styleguide`
 
 ## Requirements
 

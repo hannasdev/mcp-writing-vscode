@@ -42,6 +42,16 @@ const {
   handleExistingStyleguideDuringSetup,
 } = extension.__test;
 
+test.beforeEach(() => {
+  warningImpl = async () => null;
+  errorImpl = async () => null;
+  executeCommandImpl = async () => undefined;
+});
+
+test.after(() => {
+  Module._load = originalLoad;
+});
+
 test('parseToolText parses JSON content', () => {
   const parsed = parseToolText({ content: [{ text: '{"ok":true,"value":1}' }] });
   assert.deepEqual(parsed.parsed, { ok: true, value: 1 });
@@ -108,5 +118,6 @@ test('setup existing-config handler shows fallback guidance when update flow can
 
   const handled = await handleExistingStyleguideDuringSetup({ error: { code: 'STYLEGUIDE_CONFIG_EXISTS' } });
   assert.equal(handled, true);
-  assert.equal(fallbackMessage, EXISTING_STYLEGUIDE_FALLBACK);
+  assert.ok(fallbackMessage.startsWith(EXISTING_STYLEGUIDE_FALLBACK));
+  assert.ok(fallbackMessage.includes('command failed'));
 });

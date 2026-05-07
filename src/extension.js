@@ -202,8 +202,8 @@ async function handleExistingStyleguideDuringSetup(payload) {
   if (choice === state.primaryAction) {
     try {
       await vscode.commands.executeCommand("mcpWriting.updateProseStyleguide");
-    } catch {
-      vscode.window.showErrorMessage(EXISTING_STYLEGUIDE_FALLBACK);
+    } catch (error) {
+      await vscode.window.showErrorMessage(`${EXISTING_STYLEGUIDE_FALLBACK} (${error instanceof Error ? error.message : String(error)})`);
     }
   }
 

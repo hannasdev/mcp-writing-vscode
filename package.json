@@ -70,7 +70,7 @@
   },
   "scripts": {
     "lint": "echo 'Add lint config'",
-    "test": "node --test test/*.test.cjs",
+    "test": "node --test test/extension.test.cjs",
     "package": "vsce package",
     "publish:marketplace": "vsce publish"
   },
