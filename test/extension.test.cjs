@@ -118,6 +118,5 @@ test('setup existing-config handler shows fallback guidance when update flow can
 
   const handled = await handleExistingStyleguideDuringSetup({ error: { code: 'STYLEGUIDE_CONFIG_EXISTS' } });
   assert.equal(handled, true);
-  assert.ok(fallbackMessage.startsWith(EXISTING_STYLEGUIDE_FALLBACK));
-  assert.ok(fallbackMessage.includes('command failed'));
+  assert.equal(fallbackMessage, EXISTING_STYLEGUIDE_FALLBACK);
 });
