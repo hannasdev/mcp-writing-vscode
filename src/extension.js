@@ -168,7 +168,7 @@ class McpSseClient {
   }
 }
 
-const EXISTING_STYLEGUIDE_MESSAGE = "A prose styleguide config already exists for this project.";
+const EXISTING_STYLEGUIDE_MESSAGE = "A prose styleguide config already exists at the target location.";
 const EXISTING_STYLEGUIDE_TITLE = "Styleguide already set up";
 const EXISTING_STYLEGUIDE_FALLBACK = "Couldn't open styleguide editor. Try the styleguide update command from Command Palette.";
 const EDIT_EXISTING_STYLEGUIDE_ACTION = "Edit existing styleguide";
