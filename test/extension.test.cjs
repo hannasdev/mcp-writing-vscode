@@ -70,7 +70,7 @@ test('isExistingStyleguideConfigError matches STYLEGUIDE_CONFIG_EXISTS only', ()
 });
 
 test('existing config message is the approved user-facing copy', () => {
-  assert.equal(EXISTING_STYLEGUIDE_MESSAGE, 'A prose styleguide config already exists for this project.');
+  assert.equal(EXISTING_STYLEGUIDE_MESSAGE, 'A prose styleguide config already exists at the target location.');
 });
 
 test('STYLEGUIDE_CONFIG_EXISTS maps to dedicated existing-config UI state', () => {
