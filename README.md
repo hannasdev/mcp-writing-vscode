@@ -14,6 +14,7 @@ Set up your MCP Writing prose styleguide directly in VS Code with a guided flow.
 - `MCP Writing: Test Server Connection`
 - `MCP Writing: Setup Prose Styleguide`
 - `MCP Writing: Update Prose Styleguide`
+- `MCP Writing: Show Version Info`
 
 ## Requirements
 
@@ -40,3 +41,20 @@ Set up your MCP Writing prose styleguide directly in VS Code with a guided flow.
 
 - MCP Writing: [github.com/hannasdev/mcp-writing](https://github.com/hannasdev/mcp-writing)
 - Extension repository: [github.com/hannasdev/mcp-writing-vscode](https://github.com/hannasdev/mcp-writing-vscode)
+
+## Versioning and build identity
+
+- **Extension version** comes from `package.json` (`version`) and is what VS Code Marketplace shows.
+- **Build identity** is generated at package/publish time (`scripts/generate-build-info.mjs`) and includes:
+  - `git_sha`
+  - `git_branch`
+  - `build_time_utc`
+  - `repo_dirty`
+
+Use `MCP Writing: Show Version Info` to see both values in the running extension.
+
+## Release model
+
+- Distributed as versioned `.vsix` artifacts via GitHub Releases.
+- Marketplace publishing is optional and not required for normal releases.
+- Release guide: `RELEASING.md`.

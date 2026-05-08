@@ -1,4 +1,11 @@
 const vscode = require("vscode");
+const packageJson = require("../package.json");
+let buildInfo = null;
+try {
+  buildInfo = require("./build-info.json");
+} catch {
+  buildInfo = null;
+}
 
 class McpSseClient {
   constructor(baseUrl) {
@@ -218,6 +225,22 @@ function parseToolText(result) {
   } catch {
     return { parsed: null, rawText: first };
   }
+}
+
+function formatVersionInfoMessage() {
+  const extensionVersion = packageJson.version ?? "unknown";
+  const buildSha = buildInfo?.git_sha ?? "unknown";
+  const buildBranch = buildInfo?.git_branch ?? "unknown";
+  const buildTime = buildInfo?.build_time_utc ?? "unknown";
+  const repoDirty = typeof buildInfo?.repo_dirty === "boolean" ? String(buildInfo.repo_dirty) : "unknown";
+  return [
+    `MCP Writing VS Code`,
+    `Extension version: ${extensionVersion}`,
+    `Build commit: ${buildSha}`,
+    `Build branch: ${buildBranch}`,
+    `Build time (UTC): ${buildTime}`,
+    `Build repo_dirty: ${repoDirty}`,
+  ].join("\n");
 }
 
 function getServerUrl() {
@@ -548,6 +571,10 @@ function activate(context) {
     }
   });
 
+  const showVersionInfoDisposable = vscode.commands.registerCommand("mcpWriting.showVersionInfo", async () => {
+    vscode.window.showInformationMessage(formatVersionInfoMessage());
+  });
+
   const testConnectionDisposable = vscode.commands.registerCommand("mcpWriting.testServerConnection", async () => {
     try {
       await testServerConnection();
@@ -556,7 +583,7 @@ function activate(context) {
     }
   });
 
-  context.subscriptions.push(setupDisposable, updateDisposable, testConnectionDisposable);
+  context.subscriptions.push(setupDisposable, updateDisposable, testConnectionDisposable, showVersionInfoDisposable);
 }
 
 function deactivate() {}
@@ -574,5 +601,6 @@ module.exports = {
     CANCEL_ACTION,
     getExistingStyleguideUiState,
     handleExistingStyleguideDuringSetup,
+    formatVersionInfoMessage,
   },
 };

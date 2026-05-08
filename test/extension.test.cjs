@@ -40,6 +40,7 @@ const {
   CANCEL_ACTION,
   getExistingStyleguideUiState,
   handleExistingStyleguideDuringSetup,
+  formatVersionInfoMessage,
 } = extension.__test;
 
 test.beforeEach(() => {
@@ -119,4 +120,11 @@ test('setup existing-config handler shows fallback guidance when update flow can
   const handled = await handleExistingStyleguideDuringSetup({ error: { code: 'STYLEGUIDE_CONFIG_EXISTS' } });
   assert.equal(handled, true);
   assert.equal(fallbackMessage, EXISTING_STYLEGUIDE_FALLBACK);
+});
+
+
+test('formatVersionInfoMessage includes extension version and build commit', () => {
+  const msg = formatVersionInfoMessage();
+  assert.match(msg, /Extension version: /);
+  assert.match(msg, /Build commit: /);
 });
