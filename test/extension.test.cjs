@@ -41,6 +41,7 @@ const {
   CANCEL_ACTION,
   getExistingStyleguideUiState,
   handleExistingStyleguideDuringSetup,
+  formatVersionInfoMessage,
 } = extension.__test;
 
 test.beforeEach(() => {
@@ -123,6 +124,12 @@ test('setup existing-config handler shows fallback guidance when update flow can
   assert.equal(fallbackMessage, EXISTING_STYLEGUIDE_FALLBACK);
 });
 
+test('formatVersionInfoMessage includes extension version and build commit', () => {
+  const msg = formatVersionInfoMessage();
+  assert.match(msg, /Extension version: /);
+  assert.match(msg, /Build commit: /);
+});
+
 test('activate registers expected command IDs and subscriptions', async () => {
   const registered = [];
   const context = { subscriptions: [] };
@@ -137,11 +144,12 @@ test('activate registers expected command IDs and subscriptions', async () => {
     registered.map((row) => row.name).sort(),
     [
       'mcpWriting.setupProseStyleguide',
+      'mcpWriting.showVersionInfo',
       'mcpWriting.testServerConnection',
       'mcpWriting.updateProseStyleguide',
     ]
   );
-  assert.equal(context.subscriptions.length, 3);
+  assert.equal(context.subscriptions.length, 4);
 });
 
 test('registered update command surfaces a user-facing error when flow fails', async () => {
