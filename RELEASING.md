@@ -12,15 +12,15 @@ npm version patch --no-git-tag-version
 
 (or `minor`/`major` as needed)
 
-## 2. Build + test + package
+## 2. Build + test + package + notes
 
 ```bash
-npm test
-npm run release:vsix
+npm run release:prep
 ```
 
 This will:
 - generate `src/build-info.json`
+- run tests
 - package `mcp-writing-vscode-<version>.vsix`
 - generate `release/v<version>.md`
 

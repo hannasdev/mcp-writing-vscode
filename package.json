@@ -83,7 +83,7 @@
     "release:vsix": "npm test && vsce package",
     "release:notes": "node scripts/write-release-notes.mjs",
     "release:prep": "npm run build:info && npm run release:vsix && npm run release:notes",
-    "prepublish": "npm run build:info"
+    "vscode:prepublish": "npm run build:info"
   },
   "devDependencies": {
     "@types/vscode": "^1.100.0",
