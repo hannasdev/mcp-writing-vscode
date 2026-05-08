@@ -76,14 +76,14 @@
   "scripts": {
     "lint": "echo 'Add lint config'",
     "test": "node --test test/extension.test.cjs",
-    "package": "npm run build:info && vsce package",
-    "publish:marketplace": "npm run build:info && vsce publish",
+    "package": "vsce package",
+    "publish:marketplace": "vsce publish",
     "build:info": "node scripts/generate-build-info.mjs",
     "prepackage": "npm run build:info",
-    "prepublish:marketplace": "npm run build:info",
-    "release:vsix": "npm run build:info && npm test && vsce package",
-    "release:notes": "npm run build:info && node scripts/write-release-notes.mjs",
-    "release:prep": "npm run release:vsix && npm run release:notes"
+    "release:vsix": "npm test && vsce package",
+    "release:notes": "node scripts/write-release-notes.mjs",
+    "release:prep": "npm run build:info && npm run release:vsix && npm run release:notes",
+    "prepublish": "npm run build:info"
   },
   "devDependencies": {
     "@types/vscode": "^1.100.0",

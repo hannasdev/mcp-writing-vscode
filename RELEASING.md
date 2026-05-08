@@ -27,7 +27,7 @@ This will:
 ## 3. Commit and tag
 
 ```bash
-git add package.json package-lock.json src/extension.js test/extension.test.cjs README.md .gitignore scripts/ RELEASING.md
+git add package.json package-lock.json src/extension.js test/extension.test.cjs README.md .gitignore scripts/ release/ RELEASING.md
 # plus any other intended release changes
 git commit -m "chore(release): cut v<version>"
 git tag v<version>

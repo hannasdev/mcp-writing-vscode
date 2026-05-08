@@ -17,7 +17,7 @@ function sh(cmd) {
 
 let gitSha = 'unknown';
 let gitBranch = 'unknown';
-let repoDirty = null;
+let repoDirty = 'unknown';
 try {
   gitSha = sh('git rev-parse --short=12 HEAD');
   gitBranch = sh('git rev-parse --abbrev-ref HEAD');
