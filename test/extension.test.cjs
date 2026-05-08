@@ -6,6 +6,7 @@ const originalLoad = Module._load;
 let warningImpl = async () => null;
 let errorImpl = async () => null;
 let executeCommandImpl = async () => undefined;
+let registerCommandImpl = (_name, _handler) => ({ dispose() {} });
 
 Module._load = function(request, parent, isMain) {
   if (request === 'vscode') {
@@ -21,7 +22,7 @@ Module._load = function(request, parent, isMain) {
         getConfiguration: () => ({ get: (_k, d) => d }),
       },
       commands: {
-        registerCommand: () => ({ dispose() {} }),
+        registerCommand: (...args) => registerCommandImpl(...args),
         executeCommand: async (...args) => executeCommandImpl(...args),
       },
     };
@@ -47,6 +48,7 @@ test.beforeEach(() => {
   warningImpl = async () => null;
   errorImpl = async () => null;
   executeCommandImpl = async () => undefined;
+  registerCommandImpl = (_name, _handler) => ({ dispose() {} });
 });
 
 test.after(() => {
@@ -122,9 +124,58 @@ test('setup existing-config handler shows fallback guidance when update flow can
   assert.equal(fallbackMessage, EXISTING_STYLEGUIDE_FALLBACK);
 });
 
-
 test('formatVersionInfoMessage includes extension version and build commit', () => {
   const msg = formatVersionInfoMessage();
   assert.match(msg, /Extension version: /);
   assert.match(msg, /Build commit: /);
+});
+
+test('activate registers expected command IDs and subscriptions', async () => {
+  const registered = [];
+  const context = { subscriptions: [] };
+  registerCommandImpl = (name, handler) => {
+    registered.push({ name, handler });
+    return { dispose() {} };
+  };
+
+  extension.activate(context);
+
+  assert.deepEqual(
+    registered.map((row) => row.name).sort(),
+    [
+      'mcpWriting.setupProseStyleguide',
+      'mcpWriting.showVersionInfo',
+      'mcpWriting.testServerConnection',
+      'mcpWriting.updateProseStyleguide',
+    ]
+  );
+  assert.equal(context.subscriptions.length, 4);
+});
+
+test('registered update command surfaces a user-facing error when flow fails', async () => {
+  const registered = new Map();
+  const context = { subscriptions: [] };
+  const originalFetch = globalThis.fetch;
+  let errorText = '';
+
+  registerCommandImpl = (name, handler) => {
+    registered.set(name, handler);
+    return { dispose() {} };
+  };
+  errorImpl = async (msg) => {
+    errorText = msg;
+  };
+  globalThis.fetch = async () => {
+    throw new Error('network down');
+  };
+
+  try {
+    extension.activate(context);
+    const handler = registered.get('mcpWriting.updateProseStyleguide');
+    assert.ok(handler, 'update command should be registered');
+    await handler();
+    assert.ok(errorText.startsWith('MCP Writing styleguide update failed:'));
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
